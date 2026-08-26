@@ -1,0 +1,130 @@
+{
+  "tasks": [
+    {
+      "n": 1,
+      "name": "用户激活7日支付总额 & 下单次数 & 来源均值差值",
+      "desc": "【面试题】usr + ordr。\n计算每个用户：① 激活后 7 天内支付总额 ② 下单次数\n③ 该用户 7 日支付总额 与 其所在来源(source)所有用户 7 日平均支付总额 的差值。\n\n口径（面试要能说清）：\n- 激活日 = usr.reg_date（不要用首单日顶替，两张表都给了就是让你 JOIN）\n- 时间窗：reg_date <= order_date <= reg_date+6 天（含激活当天共 7 天）\n- 支付总额只计 status='paid'；取消单不算\n- 无订单用户也要出：pay_7d=0，diff 为负说明低于渠道均值\n- 均值 = 渠道内「用户 7 日 GMV」的平均，可用 AVG() OVER (PARTITION BY source)\n\n返回: user_id, source, pay_7d, order_cnt, source_avg_pay_7d, diff",
+      "tags": [
+        "面试原题",
+        "窗口函数",
+        "时间窗"
+      ],
+      "ref": "WITH user_7d AS (\n    SELECT\n        u.user_id,\n        u.source,\n        COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.ordr_amt END), 0) AS pay_7d,\n        COUNT(CASE WHEN o.status = 'paid' THEN o.order_id END) AS order_cnt\n    FROM usr u\n    LEFT JOIN ordr o\n      ON u.user_id = o.user_id\n     AND o.order_date >= u.reg_date\n     AND o.order_date <= date(u.reg_date, '+6 days')\n    GROUP BY u.user_id, u.source\n)\nSELECT\n    user_id,\n    source,\n    pay_7d,\n    order_cnt,\n    AVG(pay_7d) OVER (PARTITION BY source) AS source_avg_pay_7d,\n    pay_7d - AVG(pay_7d) OVER (PARTITION BY source) AS diff\nFROM user_7d\nORDER BY user_id;",
+      "hints": [
+        "[1] 激活日用 usr.reg_date，不要 MIN(order_date)。没下单的用户也要保留。",
+        "[2] 日期条件写在 ON 上：order_date BETWEEN reg_date AND date(reg_date,'+6 days')。写在 WHERE 会把 LEFT JOIN 打成 INNER。",
+        "[3] 只计 paid：SUM(CASE WHEN status='paid' THEN ordr_amt END)。cancel 那笔 50 不能进支付总额。",
+        "[4] 差值：pay_7d - AVG(pay_7d) OVER (PARTITION BY source)。一人一行时等价于 SUM/COUNT(用户)。"
+      ]
+    },
+    {
+      "n": 2,
+      "name": "Cohort 留存分析 (month_0 ~ month_3)",
+      "desc": "【笔试题】orders 表。每个用户首次下单月为 cohort_month，\n统计每个 cohort 在第 0/1/2/3 月仍有下单的去重用户数。\n返回: cohort_month, month_0, month_1, month_2, month_3",
+      "tags": [
+        "笔试题",
+        "透视",
+        "日期差"
+      ],
+      "ref": "WITH first_m AS (\n    SELECT user_id, MIN(strftime('%Y-%m', order_date)) AS cohort_month\n    FROM orders GROUP BY user_id\n),\nactivity AS (\n    SELECT o.user_id, f.cohort_month,\n           (strftime('%Y', o.order_date) - substr(f.cohort_month,1,4))*12\n         + (strftime('%m', o.order_date) - substr(f.cohort_month,6,2)) AS month_diff\n    FROM orders o JOIN first_m f USING(user_id)\n)\nSELECT cohort_month,\n       COUNT(DISTINCT CASE WHEN month_diff=0 THEN user_id END) AS month_0,\n       COUNT(DISTINCT CASE WHEN month_diff=1 THEN user_id END) AS month_1,\n       COUNT(DISTINCT CASE WHEN month_diff=2 THEN user_id END) AS month_2,\n       COUNT(DISTINCT CASE WHEN month_diff=3 THEN user_id END) AS month_3\nFROM activity\nWHERE month_diff BETWEEN 0 AND 3\nGROUP BY cohort_month ORDER BY cohort_month;",
+      "hints": [
+        "[1] Cohort 三步：首单月 → 每笔相对月份差 → COUNT DISTINCT + CASE 透视。",
+        "[2] SQLite 无 TIMESTAMPDIFF，用 (年差)*12 + 月差。",
+        "[3] COUNT(DISTINCT CASE WHEN month_diff=0 THEN user_id END) 是固定写法。",
+        "[4] month_0 应等于该 cohort 总用户数，可自检。"
+      ]
+    },
+    {
+      "n": 3,
+      "name": "DENSE_RANK 销量 Top3",
+      "desc": "【笔试题】product_sales。用 DENSE_RANK 取销量排名前 3 的商品。\n返回: product_name, sales_cnt, rnk，按 rnk, product_id 排序。\n并列不跳号；前 3 名有并列时行数可以 > 3。",
+      "tags": [
+        "笔试题",
+        "排名"
+      ],
+      "ref": "SELECT product_name, sales_cnt, rnk\nFROM (\n    SELECT product_id, product_name, sales_cnt,\n           DENSE_RANK() OVER (ORDER BY sales_cnt DESC) AS rnk\n    FROM product_sales\n) ranked\nWHERE rnk <= 3\nORDER BY rnk, product_id;",
+      "hints": [
+        "[1] DENSE_RANK 并列不跳号；RANK 会跳号；ROW_NUMBER 永不并列。",
+        "[2] 窗口函数不能直接 WHERE rnk<=3，要包一层子查询。",
+        "[3] ORDER BY rnk, product_id。",
+        "[4] 并列时行数可以多于 3，面试要主动说清。"
+      ]
+    },
+    {
+      "n": 4,
+      "name": "连续活跃天数",
+      "desc": "【进阶】orders 表。找出 2026-01 内连续活跃（下单）>=2 天的用户片段。\n提示: 先按天去重，row_number 开窗，date - rn 作为分组键。\n返回: user_id, consec_days，按 user_id 排序。",
+      "tags": [
+        "面试追问",
+        "日期-行号"
+      ],
+      "ref": "WITH d AS (\n    SELECT DISTINCT user_id, order_date\n    FROM orders WHERE order_date BETWEEN '2026-01-01' AND '2026-01-31'\n),\ng AS (\n    SELECT user_id, order_date,\n           date(order_date,'-'||(row_number() OVER (PARTITION BY user_id ORDER BY order_date))||' days') AS grp\n    FROM d\n)\nSELECT user_id, COUNT(*) AS consec_days\nFROM g GROUP BY user_id, grp\nHAVING COUNT(*) >= 2\nORDER BY user_id;",
+      "hints": [
+        "[1] 连续天数：日期减去行号，差值相同就是同一段连续。",
+        "[2] 先 DISTINCT 去掉同一天多单。",
+        "[3] date(order_date, '-' || rn || ' days') 做分组键。",
+        "[4] HAVING COUNT(*) >= 2 筛连续片段。"
+      ]
+    },
+    {
+      "n": 5,
+      "name": "按来源：7日转化率与人均 GMV",
+      "desc": "【岗位原话：拉新拉活 / 找增长点】基于 usr + ordr。\n按 source 统计：\n- users: 该来源用户数\n- pay_users: 激活 7 日内至少 1 笔 paid 的用户数\n- cvr_7d: 7 日转化率 = pay_users / users\n- gmv_7d: 7 日内 paid 总额\n- arpu_7d: 7 日人均 GMV = gmv_7d / users（注意分母是全部用户不是付费用户）\n\n时间窗、paid 口径与第 1 题相同。\n返回: source, users, pay_users, cvr_7d, gmv_7d, arpu_7d，按 gmv_7d 降序。",
+      "tags": [
+        "增长岗",
+        "异动下钻"
+      ],
+      "ref": "WITH user_7d AS (\n    SELECT\n        u.user_id,\n        u.source,\n        COALESCE(SUM(CASE WHEN o.status = 'paid' THEN o.ordr_amt END), 0) AS pay_7d\n    FROM usr u\n    LEFT JOIN ordr o\n      ON u.user_id = o.user_id\n     AND o.order_date >= u.reg_date\n     AND o.order_date <= date(u.reg_date, '+6 days')\n    GROUP BY u.user_id, u.source\n)\nSELECT\n    source,\n    COUNT(*) AS users,\n    SUM(CASE WHEN pay_7d > 0 THEN 1 ELSE 0 END) AS pay_users,\n    1.0 * SUM(CASE WHEN pay_7d > 0 THEN 1 ELSE 0 END) / COUNT(*) AS cvr_7d,\n    SUM(pay_7d) AS gmv_7d,\n    1.0 * SUM(pay_7d) / COUNT(*) AS arpu_7d\nFROM user_7d\nGROUP BY source\nORDER BY gmv_7d DESC;",
+      "hints": [
+        "[1] 先做成「用户 × 7日 GMV」一人一行，再按 source 聚合。",
+        "[2] 转化率分母是全部用户；ARPU 本题要求分母也是全部用户（含 0）。",
+        "[3] 付费用户：pay_7d > 0。不要用 COUNT(订单) 当用户数。",
+        "[4] 1.0 * 整数 / 整数，避免 SQLite 整除变 0。"
+      ]
+    },
+    {
+      "n": 6,
+      "name": "激活后次日复购（D1）",
+      "desc": "【留存变体】usr + ordr。用户激活日为 D0。\n统计每个 source：\n- users\n- d1_users: 激活次日（reg_date+1）有 paid 订单的去重用户数\n- d1_rate: d1_users / users\n\n返回: source, users, d1_users, d1_rate，按 source 排序。",
+      "tags": [
+        "留存",
+        "增长岗"
+      ],
+      "ref": "SELECT\n    u.source,\n    COUNT(DISTINCT u.user_id) AS users,\n    COUNT(DISTINCT CASE WHEN o.status = 'paid' THEN u.user_id END) AS d1_users,\n    1.0 * COUNT(DISTINCT CASE WHEN o.status = 'paid' THEN u.user_id END)\n        / COUNT(DISTINCT u.user_id) AS d1_rate\nFROM usr u\nLEFT JOIN ordr o\n  ON u.user_id = o.user_id\n AND o.order_date = date(u.reg_date, '+1 day')\nGROUP BY u.source\nORDER BY u.source;",
+      "hints": [
+        "[1] D1 = order_date 恰好等于 date(reg_date,'+1 day')，不是 7 日窗。",
+        "[2] LEFT JOIN，没次日订单的来源 users 仍要在。",
+        "[3] COUNT(DISTINCT CASE WHEN paid THEN user_id) 计 D1 用户。",
+        "[4] 和「7 日内任意一天复购」不是同一指标，面试别混。"
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "id": "p1",
+      "name": "甲乙箱次品（面试概率）",
+      "q": "甲箱 3 正 3 次，乙箱 3 正。从甲随机取 3 件放入乙，再从乙随机抽 1 件，是次品的概率？",
+      "options": [
+        "1/6",
+        "1/4",
+        "1/3",
+        "1/2"
+      ],
+      "answer": "1/4",
+      "explain": "全概率（超几何）：转入 k 件次品后从乙 6 件中抽到次品的概率为 k/6。P(k)=1/20,9/20,9/20,1/20 → 0+9/120+18/120+3/120=1/4。巧记：抽到的必须来自转入的 3 件(3/6)，转入件是次品的概率 3/6，故 1/4。"
+    },
+    {
+      "id": "p2",
+      "name": "实验周期（面试口述）",
+      "q": "A/B 实验周期怎么定，下列哪条最完整？",
+      "options": [
+        "跑满 3 天就够，看 p 值小于 0.05 即可停",
+        "先算样本量（MDE+功效），再至少覆盖 1 个完整周周期，避免周末效应，不peeking提前停",
+        "谁先达到显著谁赢，随时看后台",
+        "周期越长越好，至少跑两个月"
+      ],
+      "answer": "先算样本量（MDE+功效），再至少覆盖 1 个完整周周期，避免周末效应，不peeking提前停",
+      "explain": "增长岗常问：样本量由 MDE/α/功效决定；业务有周周期必须含完整周；反复偷看 p 值会通胀一类错误。"
+    }
+  ]
+}

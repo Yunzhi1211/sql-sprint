@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+.vercel
+sandbox.db
+.DS_Store
