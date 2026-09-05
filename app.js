@@ -209,7 +209,7 @@ function renderProblem() {
   }
   $("problemPane").innerHTML = `
     <h2 class="p-title">SQL${t.n} ${t.name}</h2>
-    <div class="meta">${tags}<span>SQLite 判题</span></div>
+    <div class="meta">${tags}</div>
     ${problemTabs()}
     ${body}`;
 }
@@ -294,7 +294,7 @@ function gradeQuiz() {
 (async () => {
   try {
     SQLEngine = await initSqlJs({ locateFile: (f) => SQLJS_CDN + f });
-    const [qRes, sRes] = await Promise.all([fetch("questions.json?v=3"), fetch("setup.sql?v=3")]);
+    const [qRes, sRes] = await Promise.all([fetch("questions.json?v=4"), fetch("setup.sql?v=4")]);
     data = await qRes.json();
     setupSql = await sRes.text();
     $("sql").addEventListener("input", saveDraft);
