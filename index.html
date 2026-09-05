@@ -4,69 +4,52 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>SQL Sprint · Temu 增长岗</title>
-<style>
-  :root { --bg:#0f1419; --panel:#1a2332; --line:#2a3a4f; --txt:#e7eef8; --muted:#8aa0b8;
-          --acc:#3d9cf0; --ok:#3ecf8e; --bad:#f07178; --warn:#e6c07b; }
-  * { box-sizing:border-box; }
-  body { margin:0; font-family: "Segoe UI", "PingFang SC", sans-serif; background:var(--bg); color:var(--txt); }
-  header { padding:14px 20px; border-bottom:1px solid var(--line); display:flex; gap:16px; align-items:baseline; flex-wrap:wrap; }
-  header h1 { font-size:16px; margin:0; font-weight:600; }
-  header span { color:var(--muted); font-size:13px; }
-  .layout { display:grid; grid-template-columns: 240px 1fr 320px; height:calc(100vh - 52px); }
-  nav { border-right:1px solid var(--line); overflow:auto; padding:10px; }
-  nav h3 { font-size:11px; color:var(--muted); letter-spacing:.08em; margin:12px 8px 6px; }
-  .item { display:block; width:100%; text-align:left; background:transparent; border:0; color:var(--txt);
-          padding:10px 10px; border-radius:8px; cursor:pointer; font-size:13px; }
-  .item:hover { background:#243044; }
-  .item.active { background:#1e3a5f; }
-  .item small { display:block; color:var(--muted); margin-top:3px; font-size:11px; }
-  main { padding:16px 18px; overflow:auto; display:flex; flex-direction:column; gap:10px; }
-  pre.desc { white-space:pre-wrap; background:var(--panel); border:1px solid var(--line); border-radius:10px;
-             padding:12px 14px; margin:0; font-size:13px; line-height:1.5; color:#c5d4e8; }
-  textarea { width:100%; min-height:220px; background:#0c1118; color:#d6e4f5; border:1px solid var(--line);
-             border-radius:10px; padding:12px; font-family: Consolas, "Cascadia Mono", monospace; font-size:13px; }
-  .bar { display:flex; gap:8px; flex-wrap:wrap; }
-  button.act { background:var(--acc); color:#041018; border:0; padding:8px 14px; border-radius:8px;
-               font-weight:600; cursor:pointer; }
-  button.ghost { background:transparent; color:var(--txt); border:1px solid var(--line); padding:8px 14px;
-                 border-radius:8px; cursor:pointer; }
-  .msg { padding:10px 12px; border-radius:8px; font-size:13px; }
-  .ok { background:#143326; color:var(--ok); }
-  .bad { background:#3a1d22; color:var(--bad); }
-  .info { background:var(--panel); color:var(--warn); }
-  aside { border-left:1px solid var(--line); overflow:auto; padding:12px; font-size:12px; }
-  aside h3 { margin:8px 0 6px; font-size:12px; color:var(--muted); }
-  table { width:100%; border-collapse:collapse; font-size:11px; }
-  th, td { border:1px solid var(--line); padding:4px 6px; text-align:left; }
-  th { color:var(--muted); }
-  .out { background:#0c1118; border:1px solid var(--line); border-radius:8px; padding:10px;
-         white-space:pre-wrap; font-family: Consolas, monospace; font-size:12px; max-height:220px; overflow:auto; }
-  .quiz label { display:block; background:var(--panel); border:1px solid var(--line); border-radius:8px;
-                padding:8px 10px; margin:6px 0; cursor:pointer; }
-  @media (max-width: 960px) {
-    .layout { grid-template-columns: 1fr; height:auto; }
-    nav, aside { border:0; max-height: 240px; }
-  }
-</style>
+<link rel="stylesheet" href="styles.css?v=3"/>
 </head>
 <body>
-<header>
-  <h1>SQL Sprint</h1>
-  <span>Temu 用户增长 · 浏览器内 SQLite 判题 · 无需安装</span>
+<header class="topbar">
+  <div class="top-left">
+    <strong>SQL Sprint</strong>
+    <span class="muted">Temu 增长岗 · SQLite</span>
+  </div>
+  <div class="top-mid">
+    <button class="nav-btn" id="btnPrev" onclick="goPrev()">‹ 上一题</button>
+    <span id="topTitle">第 1 题</span>
+    <button class="nav-btn" id="btnNext" onclick="goNext()">下一题 ›</button>
+  </div>
+  <div class="top-right muted">练习模式</div>
 </header>
-<div class="layout">
-  <nav id="nav"></nav>
-  <main id="main"><div class="msg info">正在加载 SQLite 引擎…</div></main>
-  <aside>
-    <h3>表结构</h3>
-    <pre id="schema" class="out" style="max-height:none"></pre>
-    <h3>usr 预览</h3>
-    <div id="t_usr"></div>
-    <h3>ordr 预览</h3>
-    <div id="t_ordr"></div>
-  </aside>
+
+<div class="shell">
+  <nav id="nav" class="qnav" aria-label="题目列表"></nav>
+
+  <section class="problem" id="problemPane"></section>
+
+  <section class="workspace">
+    <div class="editor-wrap" id="editorWrap">
+      <div class="editor-bar">
+        <span class="dialect">SQLite</span>
+        <span class="muted tiny">date(x,'+6 days') · AVG() OVER · strftime</span>
+        <span class="grow"></span>
+        <button class="ghost" onclick="resetSql()">重置</button>
+      </div>
+      <textarea id="sql" spellcheck="false" placeholder="在此写 SQL"></textarea>
+    </div>
+    <div class="quiz-editor muted" id="quizEditor">本题为选择题，请在中间题面作答。</div>
+    <div class="console">
+      <div class="console-bar">
+        <button class="tab on" id="tabResult" onclick="showConsole('result')">执行结果</button>
+        <button class="tab" id="tabHint" onclick="showConsole('hint')">提示</button>
+        <span class="grow"></span>
+        <button class="ghost" onclick="runTest()">自测运行</button>
+        <button class="act" onclick="runJudge()">保存并提交</button>
+      </div>
+      <div id="consoleBody" class="console-body muted">写完 SQL 后点「自测运行」看输出，或「保存并提交」对照标准答案。</div>
+    </div>
+  </section>
 </div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.11.0/sql-wasm.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>
