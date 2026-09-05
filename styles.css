@@ -1,0 +1,227 @@
+:root {
+  --bg: #f4f5f7;
+  --panel: #fff;
+  --line: #e6e8eb;
+  --txt: #222;
+  --muted: #8a9099;
+  --green: #18a058;
+  --green-d: #148a4a;
+  --ok: #18a058;
+  --bad: #d03050;
+  --warn: #f0a020;
+  --nav: #1c2430;
+  --nav-txt: #d7dee8;
+  --editor: #1e1e1e;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: var(--txt);
+  background: var(--bg);
+}
+.muted { color: var(--muted); }
+.tiny { font-size: 12px; }
+.grow { flex: 1; }
+
+.topbar {
+  height: 48px;
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+}
+.top-left { display: flex; align-items: baseline; gap: 10px; min-width: 220px; }
+.top-left strong { font-size: 15px; }
+.top-mid { flex: 1; display: flex; justify-content: center; align-items: center; gap: 16px; }
+#topTitle { font-weight: 600; font-size: 14px; }
+.nav-btn {
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  color: #333;
+}
+.nav-btn:hover { border-color: var(--green); color: var(--green); }
+.top-right { font-size: 13px; }
+
+.shell {
+  display: grid;
+  grid-template-columns: 220px minmax(320px, 1fr) minmax(420px, 1.15fr);
+  height: calc(100vh - 48px);
+}
+
+.qnav {
+  background: var(--nav);
+  color: var(--nav-txt);
+  overflow: auto;
+  padding: 10px 8px;
+}
+.qnav h3 {
+  font-size: 11px;
+  letter-spacing: .08em;
+  color: #8aa0b8;
+  margin: 12px 8px 6px;
+}
+.item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: var(--nav-txt);
+  padding: 9px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.item:hover { background: #2a3544; }
+.item.active { background: #1e3a5f; color: #fff; }
+.item .no { color: #7ad0a0; font-weight: 700; margin-right: 6px; }
+.item small { display: block; color: #8aa0b8; margin-top: 3px; font-size: 11px; }
+
+.problem {
+  background: var(--panel);
+  border-right: 1px solid var(--line);
+  overflow: auto;
+  padding: 18px 22px 28px;
+}
+.p-title { font-size: 20px; font-weight: 700; margin: 0 0 10px; line-height: 1.35; }
+.meta { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin-bottom: 12px; }
+.tag {
+  display: inline-block;
+  background: #fff5e6;
+  color: #d48b00;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 12px;
+}
+.ptabs { display: flex; gap: 18px; border-bottom: 1px solid var(--line); margin-bottom: 16px; }
+.ptab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 8px 0;
+  cursor: pointer;
+  color: #555;
+  font-size: 14px;
+}
+.ptab.on { color: var(--green); border-bottom-color: var(--green); font-weight: 600; }
+.desc { white-space: pre-wrap; font-size: 14px; line-height: 1.7; color: #333; margin: 0 0 18px; }
+.block h4 { margin: 16px 0 8px; font-size: 14px; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 12px; }
+th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; }
+th { background: #fafafa; color: #666; font-weight: 600; }
+.hint-line { background: #fffbe6; border: 1px solid #ffe58f; padding: 8px 10px; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+.ref {
+  background: #1e1e1e;
+  color: #d6e4f5;
+  padding: 12px;
+  border-radius: 8px;
+  overflow: auto;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+.quiz label {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 8px 0;
+  cursor: pointer;
+}
+.quiz label:hover { border-color: var(--green); }
+
+.workspace { display: flex; flex-direction: column; min-width: 0; background: #f7f8fa; }
+.editor-wrap { flex: 1.15; display: flex; flex-direction: column; min-height: 0; background: var(--editor); }
+.editor-bar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  color: #c8c8c8;
+  font-size: 13px;
+  border-bottom: 1px solid #2b2b2b;
+}
+.dialect {
+  background: #2d2d2d;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: #eee;
+}
+#sql {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  resize: none;
+  background: var(--editor);
+  color: #d4d4d4;
+  padding: 12px 14px;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+}
+.console { flex: 0.85; display: flex; flex-direction: column; min-height: 180px; background: #fff; border-top: 1px solid var(--line); }
+.console-bar {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  background: none;
+  border: 0;
+  padding: 10px 8px;
+  cursor: pointer;
+  color: #666;
+  border-bottom: 2px solid transparent;
+}
+.tab.on { color: var(--green); border-bottom-color: var(--green); font-weight: 600; }
+.ghost {
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.act {
+  background: var(--green);
+  color: #fff;
+  border: 0;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.act:hover { background: var(--green-d); }
+.console-body {
+  flex: 1;
+  overflow: auto;
+  padding: 12px 14px;
+  font-size: 13px;
+  white-space: pre-wrap;
+  font-family: Consolas, "Cascadia Mono", monospace;
+}
+.console-body.msg-ok { color: var(--ok); font-family: inherit; white-space: pre-wrap; }
+.console-body.msg-bad { color: var(--bad); font-family: inherit; white-space: pre-wrap; }
+.quiz-editor { display: none; flex: 1; align-items: center; justify-content: center; background: #fff; font-size: 14px; }
+.quiz-editor.on { display: flex; }
+.hidden { display: none !important; }
+
+@media (max-width: 1100px) {
+  .shell { grid-template-columns: 180px 1fr; grid-template-rows: 1fr 1fr; }
+  .workspace { grid-column: 1 / -1; }
+}
+@media (max-width: 720px) {
+  .shell { grid-template-columns: 1fr; height: auto; }
+  .qnav { max-height: 220px; }
+  .workspace { min-height: 520px; }
+}
