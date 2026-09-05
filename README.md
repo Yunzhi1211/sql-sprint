@@ -1,13 +1,13 @@
-# SQL Sprint
+# SQL
 
-Temu / 拼多多用户增长岗 SQL 面试练习页。题目在浏览器里用 SQLite（sql.js）判题，可直接开 GitHub Pages 或 Vercel。
+笔试 SQL、面经题与选择题练习页。
 
-在线练习：发布后打开 `https://yunzhi1211.github.io/sql-sprint/`
+在线：https://yunzhi1211.github.io/sql-sprint/
 
 本地：
 
 ```bash
-python -m http.server 8765
+python app.py
 ```
 
-或 `python app.py`（依赖 Python 的命令行判题器仍可用：`python check.py 1 my.sql`）。
+或 `python -m http.server 8765`。命令行判题：`python check.py 1 my.sql`。卡住时看页面「提示」页，不要依赖编辑器里的语法条。
